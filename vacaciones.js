@@ -41,6 +41,10 @@ function onEdit(e) {
     if (!date) {
         return;
     }
+    var points = getPointsFromRange(range);
+    if (!points) {
+        return;
+    }
 
     // Return if the edit value does not pass checkNameFormat
     var name_order = checkNameFormat(range.getValue());
@@ -48,25 +52,15 @@ function onEdit(e) {
         return;
     }
 
+
     // Record the date in the appropriate cell
-    recordDate(name_order.cell, name_order.order, date);
+    var cell = getCellFromNameAndRange(name_order.name, "NombresPeticiones");
+    recordDate(cell, name_order.order, date);
 
     // Record the points
-    recordPoints(name_order.cell, name_order.order, range.getValue());
+    cell = getCellFromNameAndRange(name_order.name, "NombresPuntos");
+    recordPoints(cell, name_order.order, points);
 
-    // Check if the input value matches a name from the named range NombresPeticiones.
-    // If it does, set the background color of the cell to green.
-    // If it doesn't, set the background color of the cell to red.
-
-    var name = range.getValue();
-    var cell = getCellFromName(name);
-
-
-
-    var row = range.getRow();
-    var col = range.getColumn();
-    var message = "Cell edited: Row " + row + ", Column " + col;
-    sheet.toast(message);
 }
 
 function isSingleCell(range) {
@@ -121,38 +115,49 @@ function checkNameFormat(value) {
  * Check name format. Checks that the given value is in the format Name (n), 
  * where Name is a valid name as getCellFromName would return, and n is a number
  * between 1 and 6.
- * If everything checks, we return the cell from the NombresPeticiones range and the number
- * Otherwise, we return null
- */    
-    Logger.log("Checking name format for " + value);
+ * 
+ * @param {*} value - String to check for format Name (n)
+ * @returns - The name and the order if the format is correct, null otherwise
+ */
+    Logger.log("checkNameFormat(" + value + ")");
     var name = value.substring(0, value.indexOf("(") - 1);
     var order = value.substring(value.indexOf("(") + 1, value.indexOf(")"));
     if (order < 1 || order > 6) {
         return null;
     }
-    var cell = getCellFromName(name);
-    Logger.log("Cell coords: " + cell.getRow() + ", " + cell.getColumn() + " (" + cell.getValues() + ")");
-    Logger.log("Number: " + order)
-    if (cell) {
-        return {
-            cell: cell,
-            order: parseInt(order)
-        };
+    var cell = getCellFromNameAndRange(name, "NombresPeticiones");
+    if (!cell) {
+        Logger.log("checkNameFormat(" + value + ") -> null")
+        return null;
     }
-    return null;
+    Logger.log("checkNameFormat(" + value + ") -> {name: " + name + ", order: " + order + "}")
+    return {
+        name: name,
+        order: parseInt(order)
+    };
+
 }
 
-// Checks whether a string matches any of the values of the cells in the named range NombresPeticiones.
-// We use getRangeByName.  If it is, return the cell that matches
-function getCellFromName(name) {
+
+function getCellFromNameAndRange(name, namedRange) {
+/**
+ * Checks whether a string matches any of the values of the cells in the given named range
+ * 
+ * @param {*} name - String to check for
+ * @param {*} namedRange - Named range to check for the string
+ * @returns - The cell that contains the string, null otherwise
+ */
+    Logger.log("getCellFromNameAndRange(" + name + ", " + namedRange + ")");
     var sheet = SpreadsheetApp.getActiveSpreadsheet();
-    var range = sheet.getRangeByName("NombresPeticiones");
+    var range = sheet.getRangeByName(namedRange);
     var values = range.getValues();
     for (var i = 0; i < values.length; i++) {
         if (values[i][0] === name) {
+            Logger.log("getCellFromNameAndRange(" + name + ", " + namedRange + ") -> range.getCell(" + (i + 1) + ", 1)");
             return range.getCell(i + 1, 1);
         }
     }
+    Logger.log("getCellFromNameAndRange(" + name + ", " + namedRange + ") -> null");
     return null;
 }
 
@@ -177,6 +182,40 @@ function getCycleFromRange(range) {
             return range.offset(-4, 0).getValue();
         }
         return null;
+    }
+
+}
+
+function getPointsFromRange(range) {
+/**
+ * Checks whether the cell either two, three or four cells above is contained in one of
+ * the named ranges PreVerano, Verano or PosVerano
+ * If it is, return the date from the points from the cell above the named range,
+ * which contains the points as int.
+ * 
+ * @param {*} range - Range to check for points
+ * @returns - The points as int, null otherwise
+ */
+    namedRanges = ["PreVerano", "Verano", "PosVerano"];
+    var res = -1;
+    for (var i = 0; i < namedRanges.length; i++) {
+        if (cellInNamedRange(range.offset(-2, 0), namedRanges[i])) {
+            // Return the value of the cell two cells above
+            res =  range.offset(-3, 0).getValue();
+        }
+        else if (cellInNamedRange(range.offset(-3, 0), namedRanges[i])) {
+            // Return the value of the cell three cells above
+            res= range.offset(-4, 0).getValue();
+        }
+        else if (cellInNamedRange(range.offset(-4, 0), namedRanges[i])) {
+            // Return the value of the cell four cells above
+            res = range.offset(-5, 0).getValue();
+        }
+        if (res == -1) {
+            return null;
+        }
+
+        return parseInt(res);
     }
 
 }
