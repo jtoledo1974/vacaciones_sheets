@@ -1,7 +1,7 @@
 function testOnEdit() {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getActiveSheet();
-    var range = sheet.getRange("F8");
+    var range = sheet.getRange("E16");
 
     // Create mock event object
     var e = {
@@ -11,12 +11,6 @@ function testOnEdit() {
 
     onEdit(e);
 
-    // Check checkNameFormat
-    var name = "Juan (1)";
-    var result = checkNameFormat(name);
-    Logger.log(result);
-    Logger.log(result.cell);
-    Logger.log(result.order);
 }
 
 function editA1() {
@@ -69,13 +63,13 @@ function isSingleCell(range) {
 
 
 function recordPoints(nameCell, round, points) {
-/**
- * Adds the points to the points area.
- * 
- * @param {*} nameCell - The first cell in the names range for the points are
- * @param {*} round - Ronda de petición
- * @param {*} date - Ciclo de vacaciones
- */
+    /**
+     * Adds the points to the points area.
+     * 
+     * @param {*} nameCell - The first cell in the names range for the points are
+     * @param {*} round - Ronda de petición
+     * @param {*} date - Ciclo de vacaciones
+     */
     Logger.log("recordPoints(" + nameCell + ", " + round + ", " + points + ")");
     // Make sure nameRow and nameCol are numbers
     var nameRow = parseInt(nameCell.getRow());
@@ -111,14 +105,14 @@ function recordDate(nameCell, round, date) {
 
 
 function checkNameFormat(value) {
-/**
- * Check name format. Checks that the given value is in the format Name (n), 
- * where Name is a valid name as getCellFromName would return, and n is a number
- * between 1 and 6.
- * 
- * @param {*} value - String to check for format Name (n)
- * @returns - The name and the order if the format is correct, null otherwise
- */
+    /**
+     * Check name format. Checks that the given value is in the format Name (n), 
+     * where Name is a valid name as getCellFromName would return, and n is a number
+     * between 1 and 6.
+     * 
+     * @param {*} value - String to check for format Name (n)
+     * @returns - The name and the order if the format is correct, null otherwise
+     */
     Logger.log("checkNameFormat(" + value + ")");
     var name = value.substring(0, value.indexOf("(") - 1);
     var order = value.substring(value.indexOf("(") + 1, value.indexOf(")"));
@@ -140,13 +134,13 @@ function checkNameFormat(value) {
 
 
 function getCellFromNameAndRange(name, namedRange) {
-/**
- * Checks whether a string matches any of the values of the cells in the given named range
- * 
- * @param {*} name - String to check for
- * @param {*} namedRange - Named range to check for the string
- * @returns - The cell that contains the string, null otherwise
- */
+    /**
+     * Checks whether a string matches any of the values of the cells in the given named range
+     * 
+     * @param {*} name - String to check for
+     * @param {*} namedRange - Named range to check for the string
+     * @returns - The cell that contains the string, null otherwise
+     */
     Logger.log("getCellFromNameAndRange(" + name + ", " + namedRange + ")");
     var sheet = SpreadsheetApp.getActiveSpreadsheet();
     var range = sheet.getRangeByName(namedRange);
@@ -167,56 +161,67 @@ function getCellFromNameAndRange(name, namedRange) {
 // the named ranges PreVerano, Verano or PosVerano
 // If it is, return the value for that cell, otherwise null
 function getCycleFromRange(range) {
-    namedRanges = ["PreVerano", "Verano", "PosVerano"];
-    for (var i = 0; i < namedRanges.length; i++) {
-        if (cellInNamedRange(range.offset(-2, 0), namedRanges[i])) {
-            // Return the value of the cell two cells above
-            return range.offset(-2, 0).getValue();
-        }
-        if (cellInNamedRange(range.offset(-3, 0), namedRanges[i])) {
-            // Return the value of the cell three cells above
-            return range.offset(-3, 0).getValue();
-        }
-        if (cellInNamedRange(range.offset(-4, 0), namedRanges[i])) {
-            // Return the value of the cell four cells above
-            return range.offset(-4, 0).getValue();
-        }
-        return null;
-    }
-
-}
-
-function getPointsFromRange(range) {
-/**
- * Checks whether the cell either two, three or four cells above is contained in one of
- * the named ranges PreVerano, Verano or PosVerano
- * If it is, return the date from the points from the cell above the named range,
- * which contains the points as int.
- * 
- * @param {*} range - Range to check for points
- * @returns - The points as int, null otherwise
- */
+    Logger.log("getCycleFromRange(" + range + ")");
     namedRanges = ["PreVerano", "Verano", "PosVerano"];
     var res = -1;
     for (var i = 0; i < namedRanges.length; i++) {
         if (cellInNamedRange(range.offset(-2, 0), namedRanges[i])) {
             // Return the value of the cell two cells above
-            res =  range.offset(-3, 0).getValue();
+            res = range.offset(-2, 0).getValue();
         }
         else if (cellInNamedRange(range.offset(-3, 0), namedRanges[i])) {
             // Return the value of the cell three cells above
-            res= range.offset(-4, 0).getValue();
+            res = range.offset(-3, 0).getValue();
+        }
+        else if (cellInNamedRange(range.offset(-4, 0), namedRanges[i])) {
+            // Return the value of the cell four cells above
+            res = range.offset(-4, 0).getValue();
+        }
+    }
+    if (res == -1) {
+        Logger.log("getCycleFromRange(" + range + ") -> null");
+        return null;
+    }
+
+    Logger.log("getCycleFromRange(" + range + ") -> " + res);
+    return res;
+
+}
+
+function getPointsFromRange(range) {
+    /**
+     * Checks whether the cell either two, three or four cells above is contained in one of
+     * the named ranges PreVerano, Verano or PosVerano
+     * If it is, return the date from the points from the cell above the named range,
+     * which contains the points as int.
+     * 
+     * @param {*} range - Range to check for points
+     * @returns - The points as int, null otherwise
+     */
+    Logger.log("getPointsFromRange(" + range + ")");
+    namedRanges = ["PreVerano", "Verano", "PosVerano"];
+    var res = -1;
+    for (var i = 0; i < namedRanges.length; i++) {
+        if (cellInNamedRange(range.offset(-2, 0), namedRanges[i])) {
+            // Return the value of the cell two cells above
+            res = range.offset(-3, 0).getValue();
+        }
+        else if (cellInNamedRange(range.offset(-3, 0), namedRanges[i])) {
+            // Return the value of the cell three cells above
+            res = range.offset(-4, 0).getValue();
         }
         else if (cellInNamedRange(range.offset(-4, 0), namedRanges[i])) {
             // Return the value of the cell four cells above
             res = range.offset(-5, 0).getValue();
         }
-        if (res == -1) {
-            return null;
-        }
-
-        return parseInt(res);
     }
+    if (res == -1) {
+        Logger.log("getPointsFromRange(" + range + ") -> null");
+        return null;
+    }
+
+    Logger.log("getPointsFromRange(" + range + ") -> " + res);
+    return parseInt(res);
 
 }
 
