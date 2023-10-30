@@ -270,3 +270,115 @@ function isCellInRange(cell, range) {
     return (cellRow >= rangeRowStart && cellRow <= rangeRowEnd) &&
         (cellCol >= rangeColStart && cellCol <= rangeColEnd);
 }
+
+
+function fillEnairePorFechas() {
+    /**
+     * Fills the EnairePorFechas table with the format required by Enaire.
+     * 
+     * @returns - null
+     */
+
+    // We go through each of the dates for pre verano, verano and pos verano
+    // We check to see which people have signed up for that date
+    // The we get the official name from the NombresCompletos named range
+    // And fill a table with 4 columns: date, first requester, second requester, third requester
+
+    // We get the spreadsheet
+    var sheet = SpreadsheetApp.getActiveSpreadsheet();
+
+    // For each of the three named ranges
+    var namedRanges = ["PreVerano", "Verano", "PosVerano"];
+
+    // get the EnairePorFechas named range
+    var enairePorFechas = sheet.getRangeByName("EnairePorFechas");
+
+    for (var i = 0; i < namedRanges.length; i++) {
+        var season_dates_and_names = getSeasonDatesAndNames(namedRanges[i]);
+        for (var j = 0; j < season_dates_and_names.length; j++) {
+            var date = season_dates_and_names[j].date;
+            var names = season_dates_and_names[j].names;
+            // appendRowEnairePorFechas(date, names);
+        }
+
+    }
+    return null;
+}
+
+
+function getSeasonDatesAndNames(namedRange) {
+    /**
+     * Gets the dates and names for a given named range.
+     * 
+     * @param {*} namedRange - Named range to get the dates and names from
+     * @returns - An array of objects with the date and the names for that date
+     */
+    Logger.log("getSeasonDatesAndNames(" + namedRange + ")");
+    var sheet = SpreadsheetApp.getActiveSpreadsheet();
+    var range = sheet.getRangeByName(namedRange);
+    var res = [];
+
+    // The season named range is a row with dates in each column
+    // The names are filled in the cells below the dates
+    // We go through each column, and for each column we get the date
+    // and the names below it
+
+    // Get the row and column indices for the top-left corner of the range
+    var rangeRowStart = range.getRow();
+    var rangeColStart = range.getColumn();
+
+    // Get the row and column indices for the bottom-right corner of the range
+    var rangeRowEnd = rangeRowStart + range.getNumRows() - 1;
+    var rangeColEnd = rangeColStart + range.getNumColumns() - 1;
+
+    // Get the row and column indices for the cell
+    var cellRow = rangeRowStart;
+    var cellCol = rangeColStart;
+
+    // Get the values for the range
+    var values = range.getValues();
+
+    var activesheet = sheet.getActiveSheet();
+    var official_names_values = sheet.getRangeByName("NombresCompletos").getValues();
+
+    // For each column
+    for (var i = 0; i < values[0].length; i++) {
+        // Get the date
+        var date = values[0][i];
+        // Get the names
+        var names = [];
+        for (var j = 2; j < 5; j++) {
+            // The names are actually outside the range, so we need to get the value from the cells
+            var name_order = activesheet.getRange(cellRow + j, cellCol + i).getValue();
+            var name = getOfficialName(name_order, official_names_values);
+            names.push(name);
+            Logger.log("(" + (cellRow + j) + ", " + (cellCol + i) + "): " + name);
+        }
+        // Add the date and the names to the result
+        Logger.log("getSeasonDatesAndNames(" + namedRange + ") -> {date: " + date + ", names: " + names + "}");
+        res.push({
+            date: date,
+            names: names
+        });
+    }
+
+    Logger.log("getSeasonDatesAndNames(" + namedRange + ") -> " + res);
+    return res;
+}
+
+function getOfficialName(name_order_string, official_names_values) {
+    /**
+     * Gets the official name from a name_order_string.
+     * 
+     * @param {*} name_order_string - String in the format Name (n), where Name is a valid name as getCellFromName would return, and n is a number between 1 and 6.
+     * @returns - The official name, null if the name_order_string is not in the correct format
+     */
+    Logger.log("getOfficialName(" + name_order_string + ", " + official_names_values + ")");
+    var name_order = checkNameFormat(name_order_string);
+    if (!name_order) {
+        Logger.log("getOfficialName(" + name_order_string + ") -> null");
+        return null;
+    }
+    var name = name_order.name;
+
+}
