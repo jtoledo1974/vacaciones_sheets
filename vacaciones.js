@@ -40,10 +40,30 @@ function onEdit(e) {
         return;
     }
 
-    // Return if the edit value does not pass checkNameFormat
-    var name_order = checkNameFormat(range.getValue());
-    if (!name_order) {
+    if (range.getValue() == "") {
+        // Clearing a cell
+        clearRequest(e.oldValue);
         return;
+    }
+
+    // Adding a new petition
+    recordRequest(range.getValue(), date, points);
+}
+
+function recordRequest(name_order_string, date, points) {
+    /**
+     * Records a new petition in the spreadsheet.
+     * 
+     * @param {*} name_order_string - String in the format Name (n), where Name is a valid name as getCellFromName would return, and n is a number between 1 and 6.
+     * @param {*} date - Ciclo de vacaciones
+     * @param {*} points - Puntos de la petición
+     * @returns null if the name_order_string is not in the correct format, the name and the order otherwise
+     */
+
+    // Return if the edit value does not pass checkNameFormat
+    var name_order = checkNameFormat(name_order_string);
+    if (!name_order) {
+        return null;
     }
 
 
@@ -54,6 +74,8 @@ function onEdit(e) {
     // Record the points
     cell = getCellFromNameAndRange(name_order.name, "NombresPuntos");
     recordPoints(cell, name_order.order, points);
+
+    return name_order;
 
 }
 
