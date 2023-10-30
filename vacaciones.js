@@ -1,7 +1,10 @@
+var spreadsheet
+var sheet
+
 function testOnEdit() {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getActiveSheet();
-    var range = sheet.getRange("E16");
+    spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    sheet = spreadsheet.getActiveSheet();
+    var range = spreadsheet.getRange("E16");
 
     // Create mock event object
     var e = {
@@ -21,12 +24,15 @@ function editA1() {
 
 function onEdit(e) {
     var range = e.range;
-    var sheet = SpreadsheetApp.getActiveSpreadsheet()
+    if (!spreadsheet) {
+        spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
+        sheet = spreadsheet.getActiveSheet();
+    }
 
     // Return if multiple cells are selected.
 
     if (!isSingleCell(range)) {
-        sheet.toast("Multiple cells selected. Please select only one cell.")
+        spreadsheet.toast("Multiple cells selected. Please select only one cell.")
         return;
     }
 
@@ -101,10 +107,8 @@ function recordPoints(nameCell, round, points) {
     var roundCol = parseInt(nameCol + 2 * round);
     Logger.log("roundCol: " + roundCol)
 
-    var sheet = SpreadsheetApp.getActiveSpreadsheet();
-    sheet.toast("Setting cell (" + nameRow + ", " + roundCol + ") to " + points);
-
-    sheet.getActiveSheet().getRange(nameRow, roundCol).setValue(points);
+    spreadsheet.toast("Setting cell (" + nameRow + ", " + roundCol + ") to " + points);
+    sheet.getRange(nameRow, roundCol).setValue(points);
 }
 
 
@@ -119,10 +123,8 @@ function recordDate(nameCell, round, date) {
     var roundCol = parseInt(nameCol + round);
     Logger.log(roundCol)
 
-    var sheet = SpreadsheetApp.getActiveSpreadsheet();
-    sheet.toast("Setting cell (" + nameRow + ", " + roundCol + ") to " + date);
-
-    sheet.getActiveSheet().getRange(nameRow, roundCol).setValue(date);
+    spreadsheet.toast("Setting cell (" + nameRow + ", " + roundCol + ") to " + date);
+    sheet.getRange(nameRow, roundCol).setValue(date);
 }
 
 
@@ -154,7 +156,6 @@ function checkNameFormat(value) {
 
 }
 
-
 function getCellFromNameAndRange(name, namedRange) {
     /**
      * Checks whether a string matches any of the values of the cells in the given named range
@@ -164,9 +165,9 @@ function getCellFromNameAndRange(name, namedRange) {
      * @returns - The cell that contains the string, null otherwise
      */
     Logger.log("getCellFromNameAndRange(" + name + ", " + namedRange + ")");
-    var sheet = SpreadsheetApp.getActiveSpreadsheet();
-    var range = sheet.getRangeByName(namedRange);
+    var range = spreadsheet.getRangeByName(namedRange);
     var values = range.getValues();
+
     for (var i = 0; i < values.length; i++) {
         if (values[i][0] === name) {
             Logger.log("getCellFromNameAndRange(" + name + ", " + namedRange + ") -> range.getCell(" + (i + 1) + ", 1)");
@@ -249,7 +250,7 @@ function getPointsFromRange(range) {
 
 // Checks whether a given range is contained in a given named range
 function cellInNamedRange(cell, rangeName) {
-    var namedRange = SpreadsheetApp.getActiveSpreadsheet().getRangeByName(rangeName);
+    var namedRange = spreadsheet.getRangeByName(rangeName);
     return isCellInRange(cell, namedRange);
 }
 
@@ -285,13 +286,16 @@ function fillEnairePorFechas() {
     // And fill a table with 4 columns: date, first requester, second requester, third requester
 
     // We get the spreadsheet
-    var sheet = SpreadsheetApp.getActiveSpreadsheet();
+    if (!spreadsheet) {
+        spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
+        sheet = spreadsheet.getActiveSheet();
+    }
 
     // For each of the three named ranges
     var namedRanges = ["PreVerano", "Verano", "PosVerano"];
 
     // get the EnairePorFechas named range
-    var enairePorFechas = sheet.getRangeByName("EnairePorFechas");
+    var enairePorFechas = spreadsheet.getRangeByName("EnairePorFechas");
 
     for (var i = 0; i < namedRanges.length; i++) {
         var season_dates_and_names = getSeasonDatesAndNames(namedRanges[i]);
@@ -314,8 +318,7 @@ function getSeasonDatesAndNames(namedRange) {
      * @returns - An array of objects with the date and the names for that date
      */
     Logger.log("getSeasonDatesAndNames(" + namedRange + ")");
-    var sheet = SpreadsheetApp.getActiveSpreadsheet();
-    var range = sheet.getRangeByName(namedRange);
+    var range = spreadsheet.getRangeByName(namedRange);
     var res = [];
 
     // The season named range is a row with dates in each column
@@ -338,8 +341,7 @@ function getSeasonDatesAndNames(namedRange) {
     // Get the values for the range
     var values = range.getValues();
 
-    var activesheet = sheet.getActiveSheet();
-    var official_names_values = sheet.getRangeByName("NombresCompletos").getValues();
+    var official_names_values = spreadsheet.getRangeByName("NombresCompletos").getValues();
 
     // For each column
     for (var i = 0; i < values[0].length; i++) {
@@ -349,8 +351,8 @@ function getSeasonDatesAndNames(namedRange) {
         var names = [];
         for (var j = 2; j < 5; j++) {
             // The names are actually outside the range, so we need to get the value from the cells
-            var name_order = activesheet.getRange(cellRow + j, cellCol + i).getValue();
-            var name = getOfficialName(name_order, official_names_values);
+            var name_order = sheet.getRange(cellRow + j, cellCol + i).getValue();
+            var name = getOfficialName(name_order);
             names.push(name);
             Logger.log("(" + (cellRow + j) + ", " + (cellCol + i) + "): " + name);
         }
@@ -366,14 +368,14 @@ function getSeasonDatesAndNames(namedRange) {
     return res;
 }
 
-function getOfficialName(name_order_string, official_names_values) {
+function getOfficialName(name_order_string) {
     /**
      * Gets the official name from a name_order_string.
      * 
      * @param {*} name_order_string - String in the format Name (n), where Name is a valid name as getCellFromName would return, and n is a number between 1 and 6.
      * @returns - The official name, null if the name_order_string is not in the correct format
      */
-    Logger.log("getOfficialName(" + name_order_string + ", " + official_names_values + ")");
+    Logger.log("getOfficialName(" + name_order_string + ")");
     var name_order = checkNameFormat(name_order_string);
     if (!name_order) {
         Logger.log("getOfficialName(" + name_order_string + ") -> null");
